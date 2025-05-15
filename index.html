@@ -1,0 +1,272 @@
+<!-- <!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <style>
+        body{
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            margin: 50px;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        #messages{
+            width: 300px;
+            height: 300px;
+            border: 1px solid #ccc;
+            overflow-y: auto;
+            margin-bottom: 10px;
+            padding: 10px;
+            /* background-color: #fff; */
+        }
+        .message {
+            margin: 5px;
+            padding: 8px 12px;
+            border-radius: 15px;
+            max-width: 80%;
+        }
+        .client-message {
+            background-color: #0084ff;
+            color: white;
+            align-self: flex-end;
+            text-align: right;
+        }
+        .server-message {
+            background-color: #e0e0e0;
+            color: black;
+            align-self: flex-start;
+            text-align: left;
+        }
+        .message-container {
+            display: flex;
+            flex-direction: column;
+            /* justify-content: flex-end; */
+            margin-bottom: 5px;
+        }
+    </style>
+    <script>
+        let socket = new WebSocket("ws://localhost:8080");
+        let inactivityTimer;
+        socket.onopen = function (event) {
+            displayMessage("Connected to websocket server", "server");
+            resetInactivityTimer();
+        };
+        socket.onmessage = function (event) {
+            displayMessage(event.data, "server");
+            resetInactivityTimer();
+        };
+        socket.onclose = function () {
+        displayMessage("Disconnected from websocket server due to inactivity", "server");
+    };
+        function displayMessage(message, sender) {
+            const messageCointainer = document.getElementById("messages");
+            const messageElement = document.createElement("div");
+            messageElement.classList.add("message");
+            messageElement.classList.add(sender === "client" ? "client-message" : "server-message");
+            messageElement.textContent = message;
+            const messageWrapper = document.createElement("div");
+            messageWrapper.classList.add("message-container");
+            messageWrapper.appendChild(messageElement);
+            messageCointainer.appendChild(messageWrapper);  
+            messageCointainer.scrollTop = messageCointainer.scrollHeight;
+        }
+        function sendMessage() {
+            let message = document.getElementById("messageInput").value;
+            if (message.trim() !== "") {
+                socket.send(message);
+                displayMessage(message,"client");
+                document.getElementById('messageInput').value = '';
+                resetInactivityTimer();
+            }
+        }
+
+        function resetInactivityTimer() {
+        clearTimeout(inactivityTimer);
+        inactivityTimer = setTimeout(() => {
+            if (socket.readyState === WebSocket.OPEN) {
+                socket.close();
+            }
+        }, 1 * 60 * 1000); // 1 minutes
+    }
+    ["mousemove", "keydown", "mousedown", "touchstart"].forEach(event => {
+        document.addEventListener(event, resetInactivityTimer);
+    });
+    </script>
+</head>
+<body>
+    <h1>Web Socket</h1>
+    <div id="messages"></div>
+    <input type="text" id="messageInput" placeholder="enter message...">
+    <button onclick="sendMessage()">send</button>
+</body>
+</html> -->
+
+    <!-- <script>
+        let socket = new WebSocket("ws://localhost:8080");
+        let inactivityTimer;
+        socket.onopen = function (event) {
+            displayMessage("Connected to websocket server", "server");
+        };
+        socket.onmessage = function (event) {
+            displayMessage(event.data, "server");
+        };
+        socket.onclose = function () {
+        displayMessage("Disconnected from websocket server due to inactivity", "server");
+    };
+        function displayMessage(message, sender) {
+            const messageCointainer = document.getElementById("messages");
+            const messageElement = document.createElement("div");
+            messageElement.classList.add("message");
+            messageElement.classList.add(sender === "client" ? "client-message" : "server-message");
+            messageElement.textContent = message;
+            const messageWrapper = document.createElement("div");
+            messageWrapper.classList.add("message-container");
+            messageWrapper.appendChild(messageElement);
+            messageCointainer.appendChild(messageWrapper);  
+            messageCointainer.scrollTop = messageCointainer.scrollHeight;
+        }
+        function sendMessage() {
+            let message = document.getElementById("messageInput").value;
+            if (message.trim() !== "") {
+                socket.send(message);
+                displayMessage(message,"client");
+                document.getElementById('messageInput').value = '';
+            }
+        }
+    </script> -->
+<!--     
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <style>
+        body{
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            margin: 50px;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        #messages{
+            width: 300px;
+            height: 300px;
+            border: 1px solid #ccc;
+            overflow-y: auto;
+            margin-bottom: 10px;
+            padding: 10px;
+        }
+        .message {
+            margin: 5px;
+            padding: 8px 12px;
+            border-radius: 15px;
+            max-width: 80%;
+        }
+        .client-message {
+            background-color: #0084ff;
+            color: white;
+            align-self: flex-end;
+            text-align: right;
+        }
+        .server-message {
+            background-color: #e0e0e0;
+            color: black;
+            align-self: flex-start;
+            text-align: left;
+        }
+        .message-container {
+            display: flex;
+            flex-direction: column;
+            margin-bottom: 5px;
+        }
+    </style>
+<script>
+        let socket = null;
+        let inactivityTimer;
+        const INACTIVITY_LIMIT = 60000; 
+        let isManuallyClosed = false;
+    
+        function connectWebSocket() {
+            socket = new WebSocket("ws://localhost:8080");
+    
+            socket.onopen = function () {
+                displayMessage("Connected to websocket server", "server");
+                resetInactivityTimer();
+            };
+    
+            socket.onmessage = function (event) {
+                displayMessage(event.data, "server");
+            };
+    
+            socket.onclose = function () {
+                displayMessage("Disconnected from websocket server", "server");
+            };
+        }
+    
+        function displayMessage(message, sender) {
+            const messageContainer = document.getElementById("messages");
+            const messageElement = document.createElement("div");
+            messageElement.classList.add("message");
+            messageElement.classList.add(sender === "client" ? "client-message" : "server-message");
+            messageElement.textContent = message;
+            const messageWrapper = document.createElement("div");
+            messageWrapper.classList.add("message-container");
+            messageWrapper.appendChild(messageElement);
+            messageContainer.appendChild(messageWrapper);
+            messageContainer.scrollTop = messageContainer.scrollHeight;
+        }
+    
+        function sendMessage() {
+            let message = document.getElementById("messageInput").value;
+            if (message.trim() !== "" && socket && socket.readyState === WebSocket.OPEN) {
+                socket.send(message);
+                displayMessage(message, "client");
+                document.getElementById('messageInput').value = '';
+                resetInactivityTimer();
+            }
+        }
+    
+        function resetInactivityTimer() {
+            clearTimeout(inactivityTimer);
+            inactivityTimer = setTimeout(() => {
+                displayMessage("No activity detected. Disconnecting...", "server");
+                if (socket && socket.readyState === WebSocket.OPEN) {
+                    socket.close();
+                }
+            }, INACTIVITY_LIMIT);
+        }
+    
+        function handleActivity() {
+            if (!socket || socket.readyState === WebSocket.CLOSED) {
+                displayMessage("Activity detected. Reconnecting...", "server");
+                connectWebSocket();
+            }
+            resetInactivityTimer();
+        }
+    
+        function startActivityListeners() {
+            ["mousemove", "keydown", "mousedown", "touchstart"].forEach(evt => {
+                document.addEventListener(evt, handleActivity);
+            });
+        }
+
+        connectWebSocket();
+        startActivityListeners();
+    </script>
+    
+
+</head>
+<body>
+    <h1>Web Socket</h1>
+    <div id="messages"></div>
+    <input type="text" id="messageInput" placeholder="enter message...">
+    <button onclick="sendMessage()">send</button>
+</body>
+</html> -->
