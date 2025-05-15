@@ -87,7 +87,7 @@ wss.on('connection', ws => {
         console.log(`[${getTime()}] Client disconnected, total clients: ${wss.clients.size}`);
         notifyClientCount(); 
     });
-});
+});     
 
 console.log(`[${getTime()}] WebSocket server is running on ws://localhost:8080`);
 
