@@ -173,7 +173,7 @@
 //         const fetchResponse = await axios.get(fetchUrl, {
 //             headers: {
 //                 Authorization: `Zoho-oauthtoken ${accessToken}`,
-//                 "Environment": "Development"
+//                 "Environment": "Production"
 //             }
 //         });
 //         const rows = fetchResponse.data.data;
@@ -197,7 +197,7 @@
 //             headers: {
 //                 Authorization: `Zoho-oauthtoken ${accessToken}`,
 //                 "Content-Type": "application/json",
-//                 "Environment": "Development"
+//                 "Environment": "Production"
 //             }
 //         });
 
@@ -338,7 +338,7 @@ async function logAgentActivity(jsonData, userFirstName) {
             headers: {
                 Authorization: `Zoho-oauthtoken ${accessToken}`,
                 "Content-Type": "application/json",
-                "Environment": "Development"
+                "Environment": "Production"
             }
         });
 
@@ -442,7 +442,7 @@ async function sendToZohoCatalystAPI(jsonData) {
         const fetchResponse = await axios.get(fetchUrl, {
             headers: {
                 Authorization: `Zoho-oauthtoken ${accessToken}`,
-                "Environment": "Development"
+                "Environment": "Production"
             }
         });
         const rows = fetchResponse.data.data;
@@ -465,7 +465,7 @@ async function sendToZohoCatalystAPI(jsonData) {
             headers: {
                 Authorization: `Zoho-oauthtoken ${accessToken}`,
                 "Content-Type": "application/json",
-                "Environment": "Development"
+                "Environment": "Production"
             }
         });
 
