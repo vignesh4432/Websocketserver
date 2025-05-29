@@ -1,47 +1,9 @@
-// // // const WebSocket = require('ws');
-// // // const wss = new WebSocket.Server({ port: 8080 });
-
-// // // function getTime() {
-// // //     return new Date().toLocaleTimeString();
-// // // }
-
-// // // function broadcast(message) {
-// // //     wss.clients.forEach(client => {
-// // //         if (client.readyState === WebSocket.OPEN) {
-// // //             client.send(message);
-// // //         }
-// // //     });
-// // // }
-
-// // // function notifyClientCount() {
-// // //     const message = `[${getTime()}] Total clients connected: ${wss.clients.size}`;
-// // //     broadcast(message);
-// // // }
-
-// // // wss.on('connection', ws => {   
-
-// // //     console.log(`[${getTime()}] New client connected, total clients: ${wss.clients.size}`);
-// // //     ws.send(`[${getTime()}] Welcome to the WebSocket server!`);
-// // //     notifyClientCount();
-
-// // //     ws.on('message', (message) => {
-// // //         console.log(`[${getTime()}] Received message: ${message}`);
-// // //         ws.send(`[${getTime()}] Server response: You sent -> ${message}`);
-// // //     });
-
-// // //     ws.on('close', () => {
-// // //         console.log(`[${getTime()}] Client disconnected, total clients: ${wss.clients.size}`);
-// // //         notifyClientCount(); 
-// // //     });
-// // // });     
-
-// // // console.log(`[${getTime()}] WebSocket server is running on ws://localhost:8080`);
-
 // const WebSocket = require('ws');
 // const url = require('url');
 // const wss = new WebSocket.Server({ port: 8080 });
 // const dotenv = require("dotenv");
 // const axios = require('axios');
+// const qs = require('querystring');
 
 // dotenv.config();
 
@@ -87,8 +49,137 @@
 //     }
 // };
 
-// wss.on('connection', (ws, req) => {   
+// async function addRowToZohoSheet(fileResourceID, sheetName, rowData) {
+//     try {
+//         const accessToken = await getAccessToken();
+//         const endpointURL = `https://sheet.zoho.com/api/v2/${fileResourceID}`;
+//         const headers = {
+//             'Authorization': `Zoho-oauthtoken ${accessToken}`,
+//             'Content-Type': 'application/x-www-form-urlencoded'
+//         };
+//         const data = {
+//             method: 'worksheet.jsondata.append',
+//             worksheet_name: sheetName,
+//             json_data: JSON.stringify([rowData])
+//         };
 
+//         const response = await axios.post(endpointURL, qs.stringify(data), { headers });
+//         console.log('Row added to Zoho Sheet successfully:', response.data);
+//         return response.data;
+//     } catch (error) {
+//         console.error('Error adding new row to Zoho Sheets:', error.response ? JSON.stringify(error.response.data) : error.message);
+//         throw new Error(`Error adding new row to Zoho Sheets: ${error.response ? JSON.stringify(error.response.data) : error.message}`);
+//     }
+// }
+
+// async function logAgentActivity(jsonData, userFirstName) {
+//     console.log('📤 Preparing to log activity in AgentActivity table and Zoho Sheet...');
+//     try {
+//         const accessToken = await getAccessToken();
+//         if (!accessToken) {
+//             throw new Error('No access token available for Zoho Catalyst API');
+//         }
+//         const { userId, Userstatus } = jsonData;
+//         if (!userId || !Userstatus) {
+//             throw new Error("Missing 'userId' or 'Userstatus' in jsonData. Cannot log activity.");
+//         }
+//         const projectId = '21031000006225557';
+//         const tableName = 'AgentActivity';
+//         const insertUrl = `https://api.catalyst.zoho.com/baas/v1/project/${projectId}/table/${tableName}/row`;
+//         const rowData = {
+//             userId,
+//             Status: Userstatus,
+//             logtimestamp: new Date().toISOString(),
+//             UserFirstName: userFirstName
+//         };
+//         const insertPayload = [rowData];
+//         console.log('🔄 Inserting activity record to AgentActivity:', { insertPayload });
+
+//         const insertResponse = await axios.post(insertUrl, insertPayload, {
+//             headers: {
+//                 Authorization: `Zoho-oauthtoken ${accessToken}`,
+//                 "Content-Type": "application/json",
+//                 "Environment": "Development"
+//             }
+//         });
+
+//         console.log('Activity record inserted successfully:', insertResponse.data);
+//         const fileResourceID = process.env.ZOHO_RESOURCE_ID;
+//         const sheetName = process.env.ZOHO_WORKSHEET_NAME5;
+//         await addRowToZohoSheet(fileResourceID, sheetName, rowData);
+
+//         return insertResponse.data;
+//     } catch (error) {
+//         console.error('Error logging activity:', {
+//             message: error.message,
+//             status: error.response?.status,
+//             data: error.response?.data,
+//             headers: error.response?.headers
+//         });
+//         throw new Error(`Failed to log activity: ${error.message}`);
+//     }
+// }
+
+// async function sendToZohoCatalystAPI(jsonData) {
+//     try {
+//         const accessToken = await getAccessToken();
+//         if (!accessToken) {
+//             throw new Error('No access token available for Zoho Catalyst API');
+//         }
+//         const { userId, Userstatus } = jsonData;
+//         if (!userId || !Userstatus) {
+//             throw new Error("Missing 'userId' or 'Userstatus' in jsonData. Cannot perform update.");
+//         }
+//         const projectId = '21031000006225557';
+//         const tableName = 'USERS';
+//         const fetchUrl = `https://api.catalyst.zoho.com/baas/v1/project/${projectId}/table/${tableName}/row?max_rows=200`;
+
+//         const fetchResponse = await axios.get(fetchUrl, {
+//             headers: {
+//                 Authorization: `Zoho-oauthtoken ${accessToken}`,
+//                 "Environment": "Development"
+//             }
+//         });
+//         const rows = fetchResponse.data.data;
+//         const userRow = rows.find(row => row.userId === userId);
+//         if (!userRow) {
+//             throw new Error(`User with userId ${userId} not found.`);
+//         }
+//         const rowId = userRow.ROWID;
+//         const userFirstName = userRow.UserFirstName; 
+//         const updateUrl = `https://api.catalyst.zoho.com/baas/v1/project/${projectId}/table/${tableName}/row`;
+//         const updatePayload = [
+//             {
+//                 ROWID: rowId,
+//                 Userstatus 
+//             }
+//         ];
+//         console.log('🔄 Updating user record:', { updatePayload });
+
+//         const updateResponse = await axios.put(updateUrl, updatePayload, {
+//             headers: {
+//                 Authorization: `Zoho-oauthtoken ${accessToken}`,
+//                 "Content-Type": "application/json",
+//                 "Environment": "Development"
+//             }
+//         });
+
+//         console.log('User record updated successfully:', updateResponse.data);
+//         await logAgentActivity(jsonData, userFirstName);
+
+//         return updateResponse.data;
+//     } catch (error) {
+//         console.error('Error updating JSON data in Zoho Catalyst API:', {
+//             message: error.message,
+//             status: error.response?.status,
+//             data: error.response?.data,
+//             headers: error.response?.headers
+//         });
+//         throw new Error(`Failed to update JSON data in Zoho Catalyst API: ${error.message}`);
+//     }
+// }
+
+// wss.on('connection', (ws, req) => {   
 //     const query = url.parse(req.url, true).query;
 //     const userId = query.userId;
     
@@ -110,7 +201,7 @@
 //             const { userId: messageUserId, Userstatus } = parsedMessage;
     
 //             if (!messageUserId || !Userstatus) {
-//                 ws.send(`[${getTime()}] ❌ Invalid message format. 'userId' and 'Userstatus' required.`);
+//                 ws.send(`[${getTime()}]  Invalid message format. 'userId' and 'Userstatus' required.`);
 //                 return;
 //             }
 
@@ -122,11 +213,11 @@
 //             };
     
 //             const result = await sendToZohoCatalystAPI(payload);
-//             ws.send(`[${getTime()}] ✅ Data sent to Zoho Catalyst successfully.`);
+//             ws.send(`[${getTime()}]  Data sent to Zoho Catalyst successfully.`);
 //             console.log(`[${getTime()}] 🎉 Response from Zoho Catalyst:`, result);
 //         } catch (err) {
-//             console.error(`[${getTime()}] ❌ Error processing message:`, err.message);
-//             ws.send(`[${getTime()}] ❌ Failed to send data to Zoho Catalyst: ${err.message}`);
+//             console.error(`[${getTime()}]  Error processing message:`, err.message);
+//             ws.send(`[${getTime()}]  Failed to send data to Zoho Catalyst: ${err.message}`);
 //         }
 //     });
 
@@ -137,12 +228,12 @@
 //             try {
 //                 const payload = {
 //                     userId: ws.userId,
-//                     Userstatus: 'Inactive' 
+//                     Userstatus: 'Inactive'
 //                 };
 //                 const result = await sendToZohoCatalystAPI(payload);
-//                 console.log(`[${getTime()}] ✅ Data sent to Zoho Catalyst on close for user ${ws.userId}:`, result);
+//                 console.log(`[${getTime()}]  Data sent to Zoho Catalyst on close for user ${ws.userId}:`, result);
 //             } catch (err) {
-//                 console.error(`[${getTime()}] ❌ Error sending data to Zoho Catalyst on close for user ${ws.userId}:`, err.message);
+//                 console.error(`[${getTime()}] Error sending data to Zoho Catalyst on close for user ${ws.userId}:`, err.message);
 //             }
 //         } else {
 //             console.log(`[${getTime()}] No userId associated with this client, skipping Zoho Catalyst update.`);
@@ -154,106 +245,34 @@
 
 // console.log(`[${getTime()}] WebSocket server is running on ws://localhost:8080`);
 
-// async function sendToZohoCatalystAPI(jsonData) {
-//     console.log('📤 Preparing to update JSON data in Zoho Catalyst DataStore...');
-//     try {
-//         const accessToken = await getAccessToken();
-//         console.log('🔑 Access token for Zoho Catalyst API:', accessToken ? 'Token retrieved' : 'No token');
-//         if (!accessToken) {
-//             throw new Error('No access token available for Zoho Catalyst API');
-//         }
-//         const { userId, Userstatus } = jsonData;
-//         if (!userId || !Userstatus) {
-//             throw new Error("Missing 'userId' or 'Userstatus' in jsonData. Cannot perform update.");
-//         }
-//         const projectId = '21031000006225557';
-//         const tableName = 'USERS';
-//         const fetchUrl = `https://api.catalyst.zoho.com/baas/v1/project/${projectId}/table/${tableName}/row?max_rows=200`;
-
-//         const fetchResponse = await axios.get(fetchUrl, {
-//             headers: {
-//                 Authorization: `Zoho-oauthtoken ${accessToken}`,
-//                 "Environment": "Production"
-//             }
-//         });
-//         const rows = fetchResponse.data.data;
-//         const userRow = rows.find(row => row.userId === userId);
-//         if (!userRow) {
-//             throw new Error(`User with userId ${userId} not found.`);
-//         }
-//         const rowId = userRow.ROWID;
-//         console.log('Matched user row:', userRow);
-//         console.log('ROWID:', rowId);
-//         const updateUrl = `https://api.catalyst.zoho.com/baas/v1/project/${projectId}/table/${tableName}/row`;
-//         const updatePayload = [
-//             {
-//                 ROWID: rowId,
-//                 Userstatus 
-//             }
-//         ];
-//         console.log('🔄 Updating user record:', { updatePayload });
-
-//         const updateResponse = await axios.put(updateUrl, updatePayload, {
-//             headers: {
-//                 Authorization: `Zoho-oauthtoken ${accessToken}`,
-//                 "Content-Type": "application/json",
-//                 "Environment": "Production"
-//             }
-//         });
-
-//         console.log('✅ User record updated successfully:', updateResponse.data);
-//         return updateResponse.data;
-
-//     } catch (error) {
-//         console.error('❌ Error updating JSON data in Zoho Catalyst API:', {
-//             message: error.message,
-//             status: error.response?.status,
-//             data: error.response?.data,
-//             headers: error.response?.headers
-//         });
-//         throw new Error(`Failed to update JSON data in Zoho Catalyst API: ${error.message}`);
-//     }
-// }   
-// const addRowToZohoSheet = async (fileResourceID, sheetName, rowData, req) => {
-//     try {
-//         const accessToken = await getAccessToken(req);
-//         const endpointURL = `https://sheet.zoho.com/api/v2/${fileResourceID}`;
-//         const headers = {
-//         'Authorization': `Zoho-oauthtoken ${accessToken}`,
-//         'Content-Type': 'application/x-www-form-urlencoded'
-//         };
-//         const data = {
-//         method: 'worksheet.jsondata.append',
-//         worksheet_name: sheetName,
-//         json_data: JSON.stringify(rowData) 
-//         };
-
-//         const response = await axios.post(endpointURL, qs.stringify(data), { headers });
-//         return response.data;
-//     } catch (error) {
-//         console.error('Error adding new row to Zoho Sheets:', error.response ? JSON.stringify(error.response.data) : error.message);
-//         throw new Error(`Error adding new row to Zoho Sheets: ${error.response ? JSON.stringify(error.response.data) : error.message}`);
-//     }
-// };
-
-
 const WebSocket = require('ws');
 const url = require('url');
-const wss = new WebSocket.Server({ port: 8080 });
+const express = require('express');
+const bodyParser = require('body-parser');
 const dotenv = require("dotenv");
 const axios = require('axios');
 const qs = require('querystring');
 
 dotenv.config();
 
+// Create Express app
+const app = express();
+app.use(bodyParser.json()); // Parse JSON bodies
+
+// Create HTTP server and WebSocket server
+const server = require('http').createServer(app);
+const wss = new WebSocket.Server({ server });
+
 function getTime() {
     return new Date().toLocaleTimeString();
 }
 
-function broadcast(message) {
+function broadcast(message, userId = null) {
     wss.clients.forEach(client => {
         if (client.readyState === WebSocket.OPEN) {
-            client.send(message);
+            if (!userId || client.userId === userId) {
+                client.send(message);
+            }
         }
     });
 }
@@ -299,14 +318,14 @@ async function addRowToZohoSheet(fileResourceID, sheetName, rowData) {
         const data = {
             method: 'worksheet.jsondata.append',
             worksheet_name: sheetName,
-            json_data: JSON.stringify([rowData]) // Wrap in array for Zoho Sheet
+            json_data: JSON.stringify([rowData])
         };
 
         const response = await axios.post(endpointURL, qs.stringify(data), { headers });
-        console.log('✅ Row added to Zoho Sheet successfully:', response.data);
+        console.log('Row added to Zoho Sheet successfully:', response.data);
         return response.data;
     } catch (error) {
-        console.error('❌ Error adding new row to Zoho Sheets:', error.response ? JSON.stringify(error.response.data) : error.message);
+        console.error('Error adding new row to Zoho Sheets:', error.response ? JSON.stringify(error.response.data) : error.message);
         throw new Error(`Error adding new row to Zoho Sheets: ${error.response ? JSON.stringify(error.response.data) : error.message}`);
     }
 }
@@ -338,18 +357,18 @@ async function logAgentActivity(jsonData, userFirstName) {
             headers: {
                 Authorization: `Zoho-oauthtoken ${accessToken}`,
                 "Content-Type": "application/json",
-                "Environment": "Production"
+                "Environment": "Development"
             }
         });
 
-        console.log('✅ Activity record inserted successfully:', insertResponse.data);
+        console.log('Activity record inserted successfully:', insertResponse.data);
         const fileResourceID = process.env.ZOHO_RESOURCE_ID;
         const sheetName = process.env.ZOHO_WORKSHEET_NAME5;
         await addRowToZohoSheet(fileResourceID, sheetName, rowData);
 
         return insertResponse.data;
     } catch (error) {
-        console.error('❌ Error logging activity:', {
+        console.error('Error logging activity:', {
             message: error.message,
             status: error.response?.status,
             data: error.response?.data,
@@ -358,6 +377,96 @@ async function logAgentActivity(jsonData, userFirstName) {
         throw new Error(`Failed to log activity: ${error.message}`);
     }
 }
+
+async function sendToZohoCatalystAPI(jsonData) {
+    try {
+        const accessToken = await getAccessToken();
+        if (!accessToken) {
+            throw new Error('No access token available for Zoho Catalyst API');
+        }
+        const { userId, Userstatus } = jsonData;
+        if (!userId || !Userstatus) {
+            throw new Error("Missing 'userId' or 'Userstatus' in jsonData. Cannot perform update.");
+        }
+        const projectId = '21031000006225557';
+        const tableName = 'USERS';
+        const fetchUrl = `https://api.catalyst.zoho.com/baas/v1/project/${projectId}/table/${tableName}/row?max_rows=200`;
+
+        const fetchResponse = await axios.get(fetchUrl, {
+            headers: {
+                Authorization: `Zoho-oauthtoken ${accessToken}`,
+                "Environment": "Development"
+            }
+        });
+        const rows = fetchResponse.data.data;
+        const userRow = rows.find(row => row.userId === userId);
+        if (!userRow) {
+            throw new Error(`User with userId ${userId} not found.`);
+        }
+        const rowId = userRow.ROWID;
+        const userFirstName = userRow.UserFirstName; 
+        const updateUrl = `https://api.catalyst.zoho.com/baas/v1/project/${projectId}/table/${tableName}/row`;
+        const updatePayload = [
+            {
+                ROWID: rowId,
+                Userstatus 
+            }
+        ];
+        console.log('🔄 Updating user record:', { updatePayload });
+
+        const updateResponse = await axios.put(updateUrl, updatePayload, {
+            headers: {
+                Authorization: `Zoho-oauthtoken ${accessToken}`,
+                "Content-Type": "application/json",
+                "Environment": "Development"
+            }
+        });
+
+        console.log('User record updated successfully:', updateResponse.data);
+        await logAgentActivity(jsonData, userFirstName);
+
+        return updateResponse.data;
+    } catch (error) {
+        console.error('Error updating JSON data in Zoho Catalyst API:', {
+            message: error.message,
+            status: error.response?.status,
+            data: error.response?.data,
+            headers: error.response?.headers
+        });
+        throw new Error(`Failed to update JSON data in Zoho Catalyst API: ${error.message}`);
+    }
+}
+
+// Updated POST endpoint to send data to all connected WebSocket clients
+app.post('/send-data', async (req, res) => {
+    const { userId, data } = req.body;
+
+    // Validate that data is provided
+    if (!data) {
+        return res.status(400).json({ error: "Missing 'data' in request body" });
+    }
+
+    try {
+        // Check if any clients are connected
+        if (wss.clients.size === 0) {
+            console.log(`[${getTime()}] No clients connected to send data`);
+            return res.status(404).json({ error: "No WebSocket clients connected" });
+        }
+
+        // Broadcast data to all connected clients
+        const message = `[${getTime()}] Data received: ${JSON.stringify(data)}`;
+        broadcast(message); // No userId filter, sends to all clients
+        console.log(`[${getTime()}] Sent data to all ${wss.clients.size} connected clients`);
+
+        res.status(200).json({ 
+            message: `Data sent to all ${wss.clients.size} connected clients`,
+            clientCount: wss.clients.size
+        });
+    } catch (error) {
+        console.error(`[${getTime()}] Error processing POST request:`, error.message);
+        res.status(500).json({ error: `Failed to process request: ${error.message}` });
+    }
+});
 
 wss.on('connection', (ws, req) => {   
     const query = url.parse(req.url, true).query;
@@ -381,7 +490,7 @@ wss.on('connection', (ws, req) => {
             const { userId: messageUserId, Userstatus } = parsedMessage;
     
             if (!messageUserId || !Userstatus) {
-                ws.send(`[${getTime()}] ❌ Invalid message format. 'userId' and 'Userstatus' required.`);
+                ws.send(`[${getTime()}] Invalid message format. 'userId' and 'Userstatus' required.`);
                 return;
             }
 
@@ -393,11 +502,11 @@ wss.on('connection', (ws, req) => {
             };
     
             const result = await sendToZohoCatalystAPI(payload);
-            ws.send(`[${getTime()}] ✅ Data sent to Zoho Catalyst successfully.`);
+            ws.send(`[${getTime()}] Data sent to Zoho Catalyst successfully.`);
             console.log(`[${getTime()}] 🎉 Response from Zoho Catalyst:`, result);
         } catch (err) {
-            console.error(`[${getTime()}] ❌ Error processing message:`, err.message);
-            ws.send(`[${getTime()}] ❌ Failed to send data to Zoho Catalyst: ${err.message}`);
+            console.error(`[${getTime()}] Error processing message:`, err.message);
+            ws.send(`[${getTime()}] Failed to send data to Zoho Catalyst: ${err.message}`);
         }
     });
 
@@ -411,9 +520,9 @@ wss.on('connection', (ws, req) => {
                     Userstatus: 'Inactive'
                 };
                 const result = await sendToZohoCatalystAPI(payload);
-                console.log(`[${getTime()}] ✅ Data sent to Zoho Catalyst on close for user ${ws.userId}:`, result);
+                console.log(`[${getTime()}] Data sent to Zoho Catalyst on close for user ${ws.userId}:`, result);
             } catch (err) {
-                console.error(`[${getTime()}] ❌ Error sending data to Zoho Catalyst on close for user ${ws.userId}:`, err.message);
+                console.error(`[${getTime()}] Error sending data to Zoho Catalyst on close for user ${ws.userId}:`, err.message);
             }
         } else {
             console.log(`[${getTime()}] No userId associated with this client, skipping Zoho Catalyst update.`);
@@ -423,63 +532,7 @@ wss.on('connection', (ws, req) => {
     });
 });     
 
-console.log(`[${getTime()}] WebSocket server is running on ws://localhost:8080`);
-
-async function sendToZohoCatalystAPI(jsonData) {
-    try {
-        const accessToken = await getAccessToken();
-        if (!accessToken) {
-            throw new Error('No access token available for Zoho Catalyst API');
-        }
-        const { userId, Userstatus } = jsonData;
-        if (!userId || !Userstatus) {
-            throw new Error("Missing 'userId' or 'Userstatus' in jsonData. Cannot perform update.");
-        }
-        const projectId = '21031000006225557';
-        const tableName = 'USERS';
-        const fetchUrl = `https://api.catalyst.zoho.com/baas/v1/project/${projectId}/table/${tableName}/row?max_rows=200`;
-
-        const fetchResponse = await axios.get(fetchUrl, {
-            headers: {
-                Authorization: `Zoho-oauthtoken ${accessToken}`,
-                "Environment": "Production"
-            }
-        });
-        const rows = fetchResponse.data.data;
-        const userRow = rows.find(row => row.userId === userId);
-        if (!userRow) {
-            throw new Error(`User with userId ${userId} not found.`);
-        }
-        const rowId = userRow.ROWID;
-        const userFirstName = userRow.UserFirstName; 
-        const updateUrl = `https://api.catalyst.zoho.com/baas/v1/project/${projectId}/table/${tableName}/row`;
-        const updatePayload = [
-            {
-                ROWID: rowId,
-                Userstatus 
-            }
-        ];
-        console.log('🔄 Updating user record:', { updatePayload });
-
-        const updateResponse = await axios.put(updateUrl, updatePayload, {
-            headers: {
-                Authorization: `Zoho-oauthtoken ${accessToken}`,
-                "Content-Type": "application/json",
-                "Environment": "Production"
-            }
-        });
-
-        console.log('✅ User record updated successfully:', updateResponse.data);
-        await logAgentActivity(jsonData, userFirstName);
-
-        return updateResponse.data;
-    } catch (error) {
-        console.error('❌ Error updating JSON data in Zoho Catalyst API:', {
-            message: error.message,
-            status: error.response?.status,
-            data: error.response?.data,
-            headers: error.response?.headers
-        });
-        throw new Error(`Failed to update JSON data in Zoho Catalyst API: ${error.message}`);
-    }
-}
+// Start the server
+server.listen(8080, () => {
+    console.log(`[${getTime()}] WebSocket and HTTP server is running on http://localhost:8080`);
+});
