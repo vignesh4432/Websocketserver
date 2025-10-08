@@ -617,14 +617,14 @@ async function addRowToZohoSheet(fileResourceID, sheetName, rowData) {
     }
 }
 
-async function logAgentActivity(jsonData, userFirstName) {
+async function logAgentActivity(jsonData) {
     console.log('📤 Preparing to log activity in AgentActivity table and Zoho Sheet...');
     try {
         const accessToken = await getAccessToken();
         if (!accessToken) {
             throw new Error('No access token available for Zoho Catalyst API');
         }
-        const { userId, Userstatus } = jsonData;
+        const { userId, Userstatus, UserFirstName } = jsonData;
         if (!userId || !Userstatus) {
             throw new Error("Missing 'userId' or 'Userstatus' in jsonData. Cannot log activity.");
         }
@@ -634,8 +634,8 @@ async function logAgentActivity(jsonData, userFirstName) {
         const rowData = {
             userId,
             Status: Userstatus,
-            logtimestamp: new Date().toISOString(),
-            UserFirstName: userFirstName
+            UserFirstName,
+            logtimestamp: new Date().toISOString()
         };
         const insertPayload = [rowData];
         console.log('🔄 Inserting activity record to AgentActivity:', { insertPayload });
@@ -767,7 +767,7 @@ wss.on('connection', (ws, req) => {
     
         try {
             const parsedMessage = JSON.parse(message);
-            const { userId: messageUserId, Userstatus } = parsedMessage;
+            const { userId: messageUserId, Userstatus, UserFirstName } = parsedMessage;
     
             if (!messageUserId || !Userstatus) {
                 ws.send(`[${getTime()}] Invalid message format. 'userId' and 'Userstatus' required.`);
@@ -778,7 +778,8 @@ wss.on('connection', (ws, req) => {
     
             const payload = {
                 userId: messageUserId,
-                Userstatus
+                Userstatus,
+                UserFirstName 
             };
     
             const result = await sendToZohoCatalystAPI(payload);
@@ -796,7 +797,7 @@ wss.on('connection', (ws, req) => {
     });
 });     
 
-
 server.listen(8080, () => {
     console.log(`[${getTime()}] WebSocket and HTTP server is running on http://localhost:8080`);
 });
+
